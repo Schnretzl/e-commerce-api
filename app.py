@@ -189,3 +189,26 @@ def get_product(id):
     if product:
         return product_schema.jsonify(product)
     return jsonify({'message': 'Product not found!'}), 404
+
+@app.route('/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    product = Product.query.get(id)
+    if not product:
+        return jsonify({'message': 'Product not found!'}), 404
+    name = request.json['name']
+    price = request.json['price']
+    stock = request.json['stock']
+    product.name = name
+    product.price = price
+    product.stock = stock
+    db.session.commit()
+    return jsonify({'message': 'Product updated successfully!'}), 200
+
+@app.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    product = Product.query.get(id)
+    if not product:
+        return jsonify({'message': 'Product not found!'}), 404
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({'message': 'Product deleted successfully!'}), 200
