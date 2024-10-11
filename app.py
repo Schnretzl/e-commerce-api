@@ -74,3 +74,8 @@ def read_customer(id):
     if customer:
         return customer_schema.jsonify(customer)
     return jsonify({'message': 'Customer not found!'}), 404
+
+@app.route('/customers', methods=['GET'])
+def get_all_customers():
+    customers = Customer.query.all()
+    return customers_schema.jsonify(customers)
