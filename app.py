@@ -79,3 +79,19 @@ def read_customer(id):
 def get_all_customers():
     customers = Customer.query.all()
     return customers_schema.jsonify(customers)
+
+@app.route('/customers/<int:id>', methods=['PUT'])
+def update_customer(id):
+    customer = Customer.query.get(id)
+    if not customer:
+        return jsonify({'message': 'Customer not found!'}), 404
+    name = request.json['name']
+    email = request.json['email']
+    phone = request.json['phone']
+    address = request.json['address']
+    customer.name = name
+    customer.email = email
+    customer.phone = phone
+    customer.address = address
+    db.session.commit()
+    return jsonify({'message': 'Customer updated successfully!'}), 200
