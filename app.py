@@ -33,7 +33,7 @@ class ProductSchema(ma.Schema):
     stock = fields.Integer(validate=validate.Range(min=0))
     
     class Meta:
-        fields = ('name', 'price', 'id')
+        fields = ('name', 'price', 'stock', 'id')
         
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
@@ -138,17 +138,29 @@ def delete_customer(id):
 # Routes for customer accounts
 # ====================================================================================================
 
-@app.route('/customer_accounts', methods=['POST'])
-def add_customer_account():
-    customer_id = request.json['customer_id']
+@app.route('/customer_accounts', methods=['GET'])
+def get_all_customer_accounts():
+    customer_accounts = CustomerAccount.query.all()
+    return customer_accounts_schema.jsonify(customer_accounts)
+
+@app.route('/customer_accounts/<int:id>', methods=['GET'])
+def get_customer_account(id):
+    customer_account = CustomerAccount.query.get(id)
+    if customer_account:
+        return customer_account_schema.jsonify(customer_account)
+    return jsonify({'message': 'Customer account not found!'}), 404
+
+@app.route('/customer_accounts/<int:id>', methods=['PUT'])
+def update_customer_account(id):
+    customer_account = CustomerAccount.query.get(id)
+    if not customer_account:
+        return jsonify({'message': 'Customer account not found!'}), 404
     username = request.json['username']
     password = request.json['password']
-    
-    new_customer_account = CustomerAccount(customer_id=customer_id, username=username, password=password)
-    db.session.add(new_customer_account)
+    customer_account.username = username
+    customer_account.password = password
     db.session.commit()
-    
-    return jsonify({'message': 'Customer account created successfully!'}), 201
+    return jsonify({'message': 'Customer account updated successfully!'}), 200
 
 # ====================================================================================================
 # Routes for products
@@ -165,3 +177,8 @@ def add_product():
     db.session.commit()
     
     return jsonify({'message': 'Product created successfully!'}), 201
+
+@app.route('/products', methods=['GET'])
+def get_all_products():
+    products = Product.query.all()
+    return products_schema.jsonify(products)
