@@ -87,8 +87,9 @@ def add_customer():
     password = request.json['password']
     
     new_customer = Customer(name=name, email=email, phone=phone, address=address)
-    new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
     db.session.add(new_customer)
+    db.session.commit()
+    new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
     db.session.add(new_customer_account)
     db.session.commit()
     
@@ -127,6 +128,8 @@ def delete_customer(id):
     customer = Customer.query.get(id)
     if not customer:
         return jsonify({'message': 'Customer not found!'}), 404
+    account = CustomerAccount.query.filter_by(customer_id=customer.id).first()
+    db.session.delete(account)
     db.session.delete(customer)
     db.session.commit()
     return jsonify({'message': 'Customer deleted successfully!'}), 200
