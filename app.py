@@ -182,3 +182,10 @@ def add_product():
 def get_all_products():
     products = Product.query.all()
     return products_schema.jsonify(products)
+
+@app.route('/products/<int:id>', methods=['GET'])
+def get_product(id):
+    product = Product.query.get(id)
+    if product:
+        return product_schema.jsonify(product)
+    return jsonify({'message': 'Product not found!'}), 404
