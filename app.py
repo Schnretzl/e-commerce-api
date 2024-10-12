@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from marshmallow import fields, validate
 from marshmallow import ValidationError
+from datetime import datetime, timedelta, date
 from my_password import my_password
 
 app = Flask(__name__)
@@ -38,10 +39,11 @@ class ProductSchema(ma.Schema):
 class OrderSchema(ma.Schema):
     customer_id = fields.Integer(required=True)
     order_date = fields.Date(required=True)
+    expected_delivery_date = fields.Date()
     total_price = fields.Float(required=True, validate=validate.Range(min=0))
     
     class Meta:
-        fields = ('customer_id', 'order_date', 'total_price', 'id')
+        fields = ('customer_id', 'order_date', 'expected_delivery_date', 'total_price', 'id')
         
 class OrderItemSchema(ma.Schema):
     order_id = fields.Integer(required=True)
@@ -96,6 +98,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
     order_date = db.Column(db.Date, nullable=False)
+    expected_delivery_date = db.Column(db.Date)
     total_price = db.Column(db.Float, nullable=False)
     customer = db.relationship('Customer', backref='orders', uselist=False)
     order_items = db.relationship('OrderItem', backref='orders', uselist=False)
@@ -286,7 +289,10 @@ def place_order():
             product = Product.query.get(item['product_id'])
             total_price += product.price * item['quantity']
             
-        new_order = Order(customer_id=customer_id, order_date=order_date, total_price=total_price)
+        order_date_obj = datetime.strptime(order_date, '%Y-%m-%d').date()
+        expected_delivery_date = order_date_obj + timedelta(days=5)
+            
+        new_order = Order(customer_id=customer_id, order_date=order_date, expected_delivery_date=expected_delivery_date, total_price=total_price)
         db.session.add(new_order)
         db.session.commit()
         
