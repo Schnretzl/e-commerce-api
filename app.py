@@ -35,6 +35,24 @@ class ProductSchema(ma.Schema):
     class Meta:
         fields = ('name', 'price', 'stock', 'id')
         
+class OrderSchema(ma.Schema):
+    customer_id = fields.Integer(required=True)
+    order_date = fields.Date(required=True)
+    total_price = fields.Float(required=True, validate=validate.Range(min=0))
+    
+    class Meta:
+        fields = ('customer_id', 'order_date', 'total_price', 'id')
+        
+class OrderItemSchema(ma.Schema):
+    order_id = fields.Integer(required=True)
+    product_id = fields.Integer(required=True)
+    quantity = fields.Integer(required=True, validate=validate.Range(min=1))
+    price = fields.Float(required=True, validate=validate.Range(min=0))
+    
+    class Meta:
+        fields = ('order_id', 'product_id', 'quantity', 'price', 'id')
+
+    
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
 
@@ -43,6 +61,12 @@ customer_accounts_schema = CustomerAccountSchema(many=True)
 
 product_schema = ProductSchema()
 products_schema = ProductSchema(many=True)
+
+order_schema = OrderSchema()
+orders_schema = OrderSchema(many=True)
+
+order_item_schema = OrderItemSchema()
+order_items_schema = OrderItemSchema(many=True)
 
 class Customer(db.Model):
     __tablename__ = 'customers'
@@ -66,6 +90,24 @@ class Product(db.Model):
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, nullable=False, default=0)
+    
+class Order(db.Model):
+    __tablename__ = 'orders'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
+    order_date = db.Column(db.Date, nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    customer = db.relationship('Customer', backref='orders', uselist=False)
+    order_items = db.relationship('OrderItem', backref='orders', uselist=False)
+    
+class OrderItem(db.Model):
+    __tablename__ = 'order_items'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    product = db.relationship('Product', backref='order_items')
     
 with app.app_context():
     db.create_all()
@@ -212,3 +254,36 @@ def delete_product(id):
     db.session.delete(product)
     db.session.commit()
     return jsonify({'message': 'Product deleted successfully!'}), 200
+
+# ====================================================================================================
+# Routes for orders
+# ====================================================================================================
+
+@app.route('/orders', methods=['POST'])
+def place_order():
+    try:
+        customer_id = request.json['customer_id']
+        order_date = request.json['order_date']
+        total_price = 0
+        order_items = request.json['order_items']
+        
+        for item in order_items:
+            product = Product.query.get(item['product_id'])
+            total_price += product.price * item['quantity']
+            
+        new_order = Order(customer_id=customer_id, order_date=order_date, total_price=total_price)
+        db.session.add(new_order)
+        db.session.commit()
+        
+        for item in order_items:
+            product = Product.query.get(item['product_id'])
+            new_order_item = OrderItem(order_id=new_order.id, product_id=product.id, quantity=item['quantity'], price=product.price)
+            db.session.add(new_order_item)
+            product.stock -= item['quantity']
+            
+        db.session.commit()
+        
+        return jsonify({'message': 'Order placed successfully!'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
