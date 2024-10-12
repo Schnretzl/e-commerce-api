@@ -50,7 +50,7 @@ class OrderItemSchema(ma.Schema):
     price = fields.Float(required=True, validate=validate.Range(min=0))
     
     class Meta:
-        fields = ('order_id', 'product_id', 'quantity', 'price', 'id')
+        fields = ('product_id', 'quantity', 'price')
 
     
 customer_schema = CustomerSchema()
@@ -175,6 +175,21 @@ def delete_customer(id):
     db.session.delete(customer)
     db.session.commit()
     return jsonify({'message': 'Customer deleted successfully!'}), 200
+
+@app.route('/customers/<int:id>/orders', methods=['GET'])
+def get_customer_order_history(id):
+    orders = Order.query.filter_by(customer_id=id).all()
+    
+    if orders:
+        orders_data = orders_schema.dump(orders)
+        
+        for order_data in orders_data:
+            order_items = OrderItem.query.filter_by(order_id=order_data['id']).all()
+            order_data['order_items'] = order_items_schema.dump(order_items)
+            
+        return jsonify(orders_data), 200
+    
+    return jsonify({'message': 'No orders found!'}), 404
 
 # ====================================================================================================
 # Routes for customer accounts
