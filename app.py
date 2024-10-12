@@ -287,3 +287,18 @@ def place_order():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/orders/<int:id>', methods=['GET'])
+def get_order(id):
+    order = Order.query.get(id)
+    if order:
+        order_items = OrderItem.query.filter_by(order_id=id).all()
+        order_data = order_schema.dump(order)
+        order_data['order_items'] = order_items_schema.dump(order_items)
+        return jsonify(order_data), 200
+    return jsonify({'message': 'Order not found!'}), 404
+
+@app.route('/orders', methods=['GET'])
+def get_all_orders():
+    orders = Order.query.all()
+    return orders_schema.jsonify(orders)
