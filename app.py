@@ -4,12 +4,14 @@ from flask_marshmallow import Marshmallow
 from marshmallow import fields, validate
 from marshmallow import ValidationError
 from datetime import datetime, timedelta, date
+from flask_cors import CORS
 from my_password import my_password
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+mysqlconnector://root:{my_password}@localhost/e_commerce_api'
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
+CORS(app)
 
 class CustomerSchema(ma.Schema):
     name = fields.String(required=True, validate=validate.Length(min=1))
@@ -54,7 +56,6 @@ class OrderItemSchema(ma.Schema):
     class Meta:
         fields = ('product_id', 'quantity', 'price')
 
-    
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
 
@@ -112,12 +113,6 @@ class OrderItem(db.Model):
     price = db.Column(db.Float, nullable=False)
     product = db.relationship('Product', backref='order_items')
     
-with app.app_context():
-    db.create_all()
-    
-if __name__ == '__main__':
-    app.run(debug=True)
-    
 # ====================================================================================================
 # Routes for customers
 # ====================================================================================================
@@ -128,14 +123,14 @@ def add_customer():
     email = request.json['email']
     phone = request.json['phone']
     address = request.json['address']
-    username = request.json['username']
-    password = request.json['password']
+    # username = request.json['username']
+    # password = request.json['password']
     
     new_customer = Customer(name=name, email=email, phone=phone, address=address)
     db.session.add(new_customer)
     db.session.commit()
-    new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
-    db.session.add(new_customer_account)
+    # new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
+    # db.session.add(new_customer_account)
     db.session.commit()
     
     return jsonify({'message': 'Customer and account created successfully!'}), 201
@@ -323,3 +318,11 @@ def get_order(id):
 def get_all_orders():
     orders = Order.query.all()
     return orders_schema.jsonify(orders)
+
+# ====================================================================================================
+
+with app.app_context():
+    db.create_all()
+    
+if __name__ == '__main__':
+    app.run(debug=True)
