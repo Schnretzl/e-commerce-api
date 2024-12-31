@@ -123,14 +123,14 @@ def add_customer():
     email = request.json['email']
     phone = request.json['phone']
     address = request.json['address']
-    # username = request.json['username']
-    # password = request.json['password']
+    username = request.json['username']
+    password = request.json['password']
     
     new_customer = Customer(name=name, email=email, phone=phone, address=address)
     db.session.add(new_customer)
     db.session.commit()
-    # new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
-    # db.session.add(new_customer_account)
+    new_customer_account = CustomerAccount(customer_id=new_customer.id, username=username, password=password)
+    db.session.add(new_customer_account)
     db.session.commit()
     
     return jsonify({'message': 'Customer and account created successfully!'}), 201
